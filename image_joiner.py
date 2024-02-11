@@ -166,7 +166,7 @@ def create_pdf(last_page=False):
 
     return count_pages
 
-def _process_all_files():
+def process_all_files():
     
     """ This is the main program logic 
     
@@ -187,4 +187,4 @@ def _process_all_files():
     print(f"Finished creating pdf from {page_count} images")
 
 if __name__ == "__main__":
-    _process_all_files()
+    process_all_files()
