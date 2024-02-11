@@ -4,9 +4,11 @@
 
 """
 
+import img2pdf
 from PIL import Image
 from config import settings
 from pathlib import Path
+
 
 def check_config(verbose=False):
     """ Checks that we have enough information to actually perfrom some operations
@@ -142,16 +144,47 @@ def stitch_images(last_page=False):
 
             img_output.save(output_filename)
 
+    return last_page
 
+
+def create_pdf(last_page=False):
+    """ Create a singe PDF for the images
+    """
+
+    assert last_page, "Invalid page number"
+
+    output_folder = Path(settings["OUTPUT_FOLDER"])
+    output_filename = output_folder / "Compiled_pdf_output.pdf"
+
+    source_image_list = get_file_list(output_folder, "*.png")
+    count_pages = 0
+
+    with open(output_filename, "wb") as pdf_file:
+        for input_image in source_image_list:
+            count_pages += 1
+        pdf_file.write(img2pdf.convert(source_image_list))
+
+    return count_pages
 
 def _process_all_files():
     
-    """ This is the main program logic """
+    """ This is the main program logic 
+    
 
-    #last_page = trim_images()
+    """
 
-    last_page = 41
-    stitch_images(last_page)
+    # First stage is to trim the whitespace from the images
+    # page_count = trim_images()
+
+    # The second stage is to stitch the images togeher
+    # page_count = 41
+    # page_count = stitch_images(page_count)
+
+    # The third stage is to create a single pdf
+    page_count = 41
+    page_count = create_pdf(page_count)
+
+    print(f"Finished creating pdf from {page_count} images")
 
 if __name__ == "__main__":
     _process_all_files()
