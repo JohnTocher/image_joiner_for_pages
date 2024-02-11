@@ -1,2 +1,19 @@
 
 INPUT_FOLDER = "/home/john/Source/Data/BrightNewWorld/01_Original"
+WORKING_FOLDER = "/home/john/Source/Data/BrightNewWorld/02_Cropped"
+OUTPUT_FOLDER = "/home/john/Source/Data/BrightNewWorld/03_Joined"
+
+PAGE_EVEN_TOP = 20
+PAGE_EVEN_LEFT = 20
+PAGE_EVEN_BOTTOM = 996
+PAGE_EVEN_RIGHT = 1507
+
+PAGE_ODD_TOP = 20
+PAGE_ODD_LEFT= 20
+PAGE_ODD_BOTTOM = 996
+PAGE_ODD_RIGHT = 770
+
+POINT_OFFSET_X = 737
+
+PAGE_STITCH_FIRST = 2
+PAGE_STITCH_LAST = 79

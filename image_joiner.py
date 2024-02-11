@@ -4,6 +4,7 @@
 
 """
 
+from PIL import Image
 from config import settings
 from pathlib import Path
 
@@ -37,21 +38,120 @@ def get_file_list(source_folder, file_filter="*.*"):
 
     return sorted_list
 
-def join_images():
-    """ This is the main program logic """
+def trim_images():
+    """ Cut relevant parts of the screenshots from input images
+
+        Generate new filenames
+    """
 
     config_ok = check_config(verbose=True)
 
     input_folder = Path(settings["INPUT_FOLDER"])
+    trim_folder = Path(settings["WORKING_FOLDER"])
+
+    first_to_join = settings["PAGE_STITCH_FIRST"]
+    last_to_join = settings["PAGE_STITCH_LAST"]
+
+    crop_window_even = (settings["PAGE_EVEN_LEFT"],settings["PAGE_EVEN_TOP"],settings["PAGE_EVEN_RIGHT"],settings["PAGE_EVEN_BOTTOM"])
+    crop_window_odd = (settings["PAGE_ODD_LEFT"],settings["PAGE_ODD_TOP"],settings["PAGE_ODD_RIGHT"],settings["PAGE_ODD_BOTTOM"])
+        
     file_list = get_file_list(input_folder, "*.png")
-    print(f"Have {len(file_list)} files to process")
+    # print(f"Have {len(file_list)} files to process")
 
-    count_files = 0
+    image_info = dict()
+    image_sizes = dict()
+
+    file_index = 0
+    output_page_num = 0
     for each_file in file_list:
-        count_files += 1
-        print(f"File: {count_files:02} : {each_file.name}")
+        file_index += 1
+        
+        with Image.open(each_file) as input_img:
+            this_size = input_img.size
+            new_count = image_sizes.get(this_size, 0) + 1
+            image_sizes[this_size] = new_count
+            output_page_num = int((file_index + 2) /2)
+            crop_window = crop_window_even
+            if file_index in range(first_to_join, last_to_join + 1):
+                if (file_index % 2) == 0:   # Even so left side
+                    output_page_suffix = "_L"
+                    crop_window = crop_window_even
+                else:
+                    output_page_suffix = "_R"
+                    crop_window = crop_window_odd
+            else:
+                output_page_suffix = ""
+            output_filedesc = f"Page_{output_page_num:02}{output_page_suffix}"
+            output_filename = trim_folder / f"{output_filedesc}.png"
+            print(f"File: {file_index:02} : {each_file.name} - {output_filedesc}")
+            cropped_img = input_img.crop(crop_window)
+            cropped_img.save(output_filename)
 
-    print(f"\nAll done")
+    print(f"Input image sizes: {image_sizes}")
+
+    return output_page_num
+
+
+def stitch_images(last_page=False):
+    """ Join input images
+
+        Generate new filenames
+    """
+
+    assert last_page, "Invalid page number"
+
+    trim_folder = Path(settings["WORKING_FOLDER"])
+    output_folder = Path(settings["OUTPUT_FOLDER"])
+
+    crop_window_left = (settings["PAGE_EVEN_LEFT"],settings["PAGE_EVEN_TOP"],settings["PAGE_EVEN_RIGHT"],settings["PAGE_EVEN_BOTTOM"])
+    crop_window_right = (settings["PAGE_ODD_LEFT"],settings["PAGE_ODD_TOP"],settings["PAGE_ODD_RIGHT"],settings["PAGE_ODD_BOTTOM"])
+    
+    crop_size_offset_x = settings["POINT_OFFSET_X"]
+
+    size_left_x = crop_window_left[2] - crop_window_left[0] + 1
+    size_left_y = crop_window_left[3] - crop_window_left[1] + 1
+
+    size_right_x = crop_window_right[2] - crop_window_right[0] + 1
+    size_right_y = crop_window_right[3] - crop_window_right[1] + 1
+    
+    size_output = (crop_size_offset_x + size_right_x, size_left_y)
+
+    print(f"Sizes are L:{size_left_x}x{size_left_y} and R:{size_right_x}x{size_right_y}")
+    source_file_list = get_file_list(trim_folder, "*.png")
+
+    for output_page_num in range(1, last_page + 1):
+        # Get a list of files with "Page_nn" in the file name
+        source_pages = [input_page for input_page in source_file_list if (f"Page_{output_page_num:02}" in input_page.name)]
+        # print(f"Page {output_page_num:02} has {len(source_pages)} source files")
+        assert len(source_pages) in range(1,3), f"Unexpected number of source images for page {output_page_num}"
+        output_filename = output_folder / f"Page_{output_page_num:02}.png"
+        img_output =Image.new("RGB", size_output, "white")
+        with(img_output):
+            if len(source_pages) == 1:
+                img_left = source_pages[0]
+                with Image.open(img_left) as input_img:
+                    img_output.paste(input_img,(0,0))
+                #this_size = input_img.size
+            else:
+                img_left = source_pages[0]
+                img_right = source_pages[1]
+                with Image.open(img_left) as input_img:
+                    img_output.paste(input_img,(0,0))
+                with Image.open(img_right) as input_img:
+                    img_output.paste(input_img,(crop_size_offset_x,0))
+
+            img_output.save(output_filename)
+
+
+
+def _process_all_files():
+    
+    """ This is the main program logic """
+
+    #last_page = trim_images()
+
+    last_page = 41
+    stitch_images(last_page)
 
 if __name__ == "__main__":
-    join_images()
+    _process_all_files()
